@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>给你的专属解密</title>
+    <style>
+        /* 橙子奶霜配色重置 */
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+            /* 背景使用浅蓝到鹅黄的渐变，清透温柔 */
+            background: linear-gradient(135deg, #B8E0E2 0%, #FAE39E 100%);
+            color: #555;
+        }
+
+        /* 核心卡片容器 */
+        #app {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(250, 195, 86, 0.15); /* 阴影也带一点暖色 */
+            width: 90%;
+            max-width: 450px;
+            min-height: 450px;
+            padding: 40px 30px;
+            box-sizing: border-box;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 页面切换动画 */
+        .screen {
+            display: none;
+            animation: fadeIn 0.6s ease;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 标题使用元气橙色 */
+        h1 {
+            font-size: 24px;
+            color: #FC9F66;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        p {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        /* 最终密码输入框样式 */
+        .password-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            margin-top: 20px;
+        }
+        .pwd-char {
+            width: 40px;
+            height: 50px;
+            font-size: 24px;
+            text-align: center;
+            border: 2px solid #FAE39E; /* 鹅黄边框 */
+            border-radius: 10px;
+            background: transparent;
+            color: #FC9F66;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .pwd-char:focus {
+            border-color: #FAC356;
+            box-shadow: 0 0 8px rgba(250, 195, 86, 0.4);
+        }
+
+        /* 关卡输入框样式 */
+        .level-input {
+            width: 80%;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid #FAE39E;
+            border-radius: 25px;
+            margin-bottom: 15px;
+            outline: none;
+            text-align: center;
+            color: #FC9F66;
+        }
+        .level-input:focus {
+            border-color: #FAC356;
+        }
+
+        /* 主按钮样式：明黄色为主，hover变元气橙 */
+        button {
+            background-color: #FAC356;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            letter-spacing: 1px;
+            width: 80%;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #FC9F66;
+        }
+        
+        /* 次要按钮：使用浅蓝色 */
+        .btn-secondary {
+            background-color: #B8E0E2;
+            color: #fff;
+            margin-top: 15px;
+        }
+        .btn-secondary:hover {
+            background-color: #9acbd0;
+        }
+
+        /* 纯文本按钮 */
+        .text-btn {
+            background: none;
+            color: #FAC356;
+            font-size: 14px;
+            margin-top: 20px;
+            padding: 0;
+            text-decoration: underline;
+            width: auto;
+            font-weight: normal;
+        }
+        .text-btn:hover {
+            background: none;
+            color: #FC9F66;
+        }
+
+        /* 媒体占位符样式 */
+        .media-placeholder {
+            width: 100%;
+            height: 150px;
+            background-color: #fcf9f2;
+            border: 2px dashed #FAE39E;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FAC356;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        /* 提示信息 */
+        .hint-text {
+            color: #FC9F66;
+            font-size: 14px;
+            min-height: 20px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .success-text {
+            color: #FAC356;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        /* 隐形墨水 */
+        .puzzle-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: left;
+            margin-bottom: 20px;
+            border: 1px solid #FAE39E;
+            box-shadow: inset 0 2px 10px rgba(250,195,86,0.05);
+        }
+        .hidden-text {
+            color: #fff;
+            user-select: all;
+        }
+        .hidden-text::selection {
+            background-color: #FC9F66; /* 选中时变成橙色 */
+            color: #fff;
+        }
+
+        /* 信件页样式 */
+        .letter-content {
+            text-align: left;
+            font-family: 'Kaiti', 'STKaiti', serif;
+            font-size: 16px;
+            color: #555;
+            line-height: 1.8;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #FAE39E;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <div id="home-screen" class="screen active">
+            <h1 style="text-align: center;">专属解密游戏</h1>
+            <p style="text-align: center;">收集齐散落的 6 位数字密码<br>开启我为你准备的最终礼物</p>
+            
+            <div class="password-container" id="pwd-inputs">
+                <input type="text" maxlength="1" class="pwd-char" data-index="0">
+                <input type="text" maxlength="1" class="pwd-char" data-index="1">
+                <input type="text" maxlength="1" class="pwd-char" data-index="2">
+                <input type="text" maxlength="1" class="pwd-char" data-index="3">
+                <input type="text" maxlength="1" class="pwd-char" data-index="4">
+                <input type="text" maxlength="1" class="pwd-char" data-index="5">
+            </div>
+
+            <button onclick="checkFinalPassword()">解 锁 礼 物</button>
+            <button class="btn-secondary" onclick="showScreen('level-1')">开始闯关获取密码</button>
+        </div>
+
+        <div id="level-1" class="screen">
+            <h1>关卡 1：时间的倒影</h1>
+            <p>第一关，让我们回到时间的轨迹里。去翻开我去年送你的那本日历，找到今天这一页。翻到背面，我在上面写了几个字？</p>
+            
+            <input type="text" id="input-l1" class="level-input" placeholder="输入答案">
+            <div id="hint-l1" class="hint-text"></div>
+            <div id="success-l1" class="success-text">恭喜！第一位密码是：2</div> 
+
+            <button onclick="checkLevel(1, ['24', '二十四'])" id="btn-check-l1">验 证 答 案</button>
+            <button class="btn-secondary" onclick="showScreen('level-2')" id="btn-next-l1" style="display:none;">进 入 下 一 关</button>
+            <br>
+            <button class="text-btn" onclick="showScreen('home-screen')">返回首页</button>
+        </div>
+
+        <div id="level-2" class="screen">
+            <h1>关卡 2：书页里的秘密</h1>
+            <p>有些话，先生们已经替我写得极好。去书架上找到我送你的那本《流光——沈从文散文选》，翻到目录。这本散文集的第六章，题目叫什么？</p>
+            
+            <input type="text" id="input-l2" class="level-input" placeholder="输入第六章的题目">
+            <div id="hint-l2" class="hint-text"></div>
+            <div id="success-l2" class="success-text">答对啦！第二位密码是：2</div>
+
+            <button onclick="checkLevel(2, ['湘行散记','《湘行散记》'])" id="btn-check-l2">验 证 答 案</button>
+            <button class="btn-secondary" onclick="showScreen('level-3')" id="btn-next-l2" style="display:none;">进 入 下 一 关</button>
+            <br>
+            <button class="text-btn" onclick="showScreen('home-screen')">返回首页</button>
+        </div>
+
+        <div id="level-3" class="screen">
+            <h1>关卡 3：视力大挑战</h1>
+            <p>小鸡里混入了什么奇怪的东西。请仔细数数，下面这张图里一共有几只猫头鹰（没有鸡冠）？</p>
+            
+            <img src="owl.jpg" alt="找猫头鹰" style="max-width: 100%; border-radius: 10px; margin-bottom: 20px; border: 2px solid #FAE39E;">
+            
+            <input type="text" id="input-l3" class="level-input" placeholder="输入猫头鹰的数量">
+            <div id="hint-l3" class="hint-text"></div>
+            <div id="success-l3" class="success-text">眼神不错！第三位密码是：0<br>
+            平时也不要太累了，让自己休息一下，不然连猫头鹰都找不到！
+       </div>
+
+            <button onclick="checkLevel(3, ['3', '三'])" id="btn-check-l3">验 证 答 案</button>
+            <button class="btn-secondary" onclick="showScreen('level-4')" id="btn-next-l3" style="display:none;">进 入 下 一 关</button>
+            <br>
+            <button class="text-btn" onclick="showScreen('home-screen')">返回首页</button>
+        </div>
+
+        <div id="level-4" class="screen">
+            <h1>关卡 4：听得见的密码</h1>
+            <p>有时候，想说的话要用心去听。点击下方 4 个播放按钮，对照密码表，听听看这 4 段“滴滴答答”的声音，翻译出来分别是哪 4 个字母？</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <audio src="letter1.mp3" controls style="width: 100%; height: 35px;"></audio>
+                <audio src="letter2.mp3" controls style="width: 100%; height: 35px;"></audio>
+                <audio src="letter3.mp3" controls style="width: 100%; height: 35px;"></audio>
+                <audio src="letter4.mp3" controls style="width: 100%; height: 35px;"></audio>
+            </div>
+
+            <img src="morse.jpg" alt="摩斯密码表" style="max-width: 100%; border-radius: 10px; margin-bottom: 20px; border: 2px solid #FAE39E;">
+
+            <input type="text" id="input-l4" class="level-input" placeholder="输入这4个字母 (如 ABCD)" style="text-transform: uppercase;">
+            <div id="hint-l4" class="hint-text"></div>
+            <div id="success-l4" class="success-text">完全正确！第四位密码是：7</div>
+
+            <button onclick="checkLevel(4, ['LOVE', 'love', 'L O V E', 'l o v e'])" id="btn-check-l4">验 证 答 案</button>
+            <button class="btn-secondary" onclick="showScreen('level-5')" id="btn-next-l4" style="display:none;">进 入 下 一 关</button>
+            <br>
+            <button class="text-btn" onclick="showScreen('home-screen')">返回首页</button>
+        </div>
+
+        <div id="level-5" class="screen">
+            <h1>关卡 5：看不见的真心话</h1>
+            <p style="font-size: 13px; color: #888;">提示：当真相隐藏于背景中，请你坚定地去选择。</p>
+            
+            <div class="puzzle-box">
+                <p style="margin-bottom: 0; color: #555;">
+                    你说你很孤独，我也做不到陪在你身边，但我可以一直在你看不见的地方支持你。<span class="hidden-text">第五位密码是：1。马上就要通关啦！</span>我希望可以陪你过以后的每一个生日。
+                </p>
+            </div>
+
+            <button class="btn-secondary" onclick="showScreen('level-6')">我记下数字了，进入最后一关！</button>
+            <br>
+            <button class="text-btn" onclick="showScreen('home-screen')">返回首页</button>
+        </div>
+
+        <div id="level-6" class="screen">
+            <h1>关卡 6：跨越屏幕的线索</h1>
+            <p>恭喜你，来到了最后一关！这最后一位密码，藏在我过去一个月的碎碎念里。</p>
+            <p>现在，请去翻看我这个月的<b>微信朋友圈</b>，把最近 8 条动态的<b>最后一个字</b>连起来。</p>
+            <p style="color: #FC9F66; font-weight: bold;">
+                得到这句通关密语后，请在微信上发给我。我会把最后一位密码交给你！
+            </p>
+
+            <button onclick="showScreen('home-screen')">集齐所有数字了，回首页解锁</button>
+        </div>
+
+        <div id="letter-screen" class="screen">
+            <h1 style="text-align: center;">梁羽琪生日快乐</h1>
+            <div class="letter-content">
+                羽毛，<br><br>
+                当你看到这封信的时候，说明你已经破解了所有的谜题，也拿到了我为你准备的实体礼物。<br><br>
+                感谢你愿意陪我玩这个有点幼稚但充满真心的解密游戏。<br><br>
+                （在这里写下你的肺腑之言……）<br><br>
+                <div style="text-align: right; margin-top: 30px;">
+                    永远支持你的<br>
+                    HAN
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 核心密码设置：220717
+        const CORRECT_PASSWORD = "220717";
+
+        // 页面切换逻辑
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+            // 切换回首页时，自动聚焦第一个输入框
+            if(screenId === 'home-screen') {
+                document.querySelector('.pwd-char[data-index="0"]').focus();
+            }
+        }
+
+        // 通用关卡验证逻辑
+        function checkLevel(levelNum, validAnswers) {
+            const inputVal = document.getElementById(`input-l${levelNum}`).value.trim();
+            const hintEl = document.getElementById(`hint-l${levelNum}`);
+            const successEl = document.getElementById(`success-l${levelNum}`);
+            const checkBtn = document.getElementById(`btn-check-l${levelNum}`);
+            const nextBtn = document.getElementById(`btn-next-l${levelNum}`);
+
+            if (inputVal === "") {
+                hintEl.innerText = "答案不能为空哦~";
+                hintEl.style.display = "block";
+                return;
+            }
+
+            // 检查答案是否在有效答案数组内
+            if (validAnswers.includes(inputVal)) {
+                hintEl.style.display = "none";
+                successEl.style.display = "block";
+                checkBtn.style.display = "none"; // 隐藏验证按钮
+                nextBtn.style.display = "inline-block"; // 显示下一关按钮
+            } else {
+                hintEl.innerText = "好像不太对哦，再想想？";
+                hintEl.style.display = "block";
+                successEl.style.display = "none";
+            }
+        }
+
+        // 首页密码输入框交互优化
+        const inputs = document.querySelectorAll('.pwd-char');
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value !== '' && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && this.value === '' && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+
+        // 最终密码验证
+        function checkFinalPassword() {
+            let enteredPassword = "";
+            inputs.forEach(input => { enteredPassword += input.value; });
+
+            if (enteredPassword.length < 6) {
+                alert("密码还没填满哦，一共需要6位数字！");
+                return;
+            }
+            if (enteredPassword === CORRECT_PASSWORD) {
+                showScreen('letter-screen');
+            } else {
+                alert("密码好像不对哦，请检查一下你每一关收集到的数字！");
+                inputs.forEach(input => input.value = "");
+                inputs[0].focus();
+            }
+        }
+    </script>
+</body>
+</html>
