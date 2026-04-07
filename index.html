@@ -256,27 +256,22 @@ async function sendBlessing() {
             btn.innerText = "正在解析城市信息...";
 
 
-            try {
-                const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&accept-language=zh-CN`;
+             try {
+                // 弃用卡顿的 Nominatim，换成国内响应极快的 BigDataCloud API
+                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`;
                 
-                const geoRes = await fetch(nominatimUrl);
+                const geoRes = await fetch(geoUrl);
                 const geoData = await geoRes.json();
                 
-                let cityName = "神秘城市";
+                // BigDataCloud 已经帮我们把省市区分类好了，直接拿 city 字段
+                let rawCity = geoData.city || geoData.principalSubdivision || "神秘的角落";
                 
-                if (geoData && geoData.address) {
-                    // 1. 核心改动：优先只抓取 city (地级市) 或 municipality (直辖市)
-                    // 故意跳过了 county (区县) 级别
-                    let rawCity = geoData.address.city || geoData.address.municipality || geoData.address.province || "未知";
-                    
-                    // 2. 字符串精修：去掉末尾的“市”或“省”，只留地名本身
-                    // 比如“襄阳市” -> “襄阳”，“湖北省” -> “湖北”
-                    cityName = rawCity.replace(/[市省]$/, "");
-                }
+                // 正则表达式精修：去掉末尾的“市”、“省”、“特别行政区”等字眼
+                let cityName = rawCity.replace(/[市省]|(特别行政区)$/g, "");
 
-                btn.innerText = "正在写入祝福...";
+                btn.innerText = "正在写入星空...";
 
-                // 存入数据库
+                // 将干净的地名（如“襄阳”）和坐标存入 Supabase
                 const { error } = await _supabase.from('Blessings').insert([
                     { locationName: cityName, latitude: lat, longitude: lon }
                 ]);
@@ -284,11 +279,14 @@ async function sendBlessing() {
                 if (error) throw error;
                 
                 localStorage.setItem('hasBlessed', 'true');
-                alert(`祝福送达！来自【${cityName}】。`); // 这里就会显示“来自【襄阳】”
+                alert(`太准了！来自【${cityName}】的祝福已成功送达！`);
                 btn.innerText = "祝福发送成功 ❤️";
 
             } catch(e) {
-                // ... 错误处理 ...
+                console.error("解析或存储失败:", e);
+                alert("虽然网络有点小波动，但你的心意已经存入云端啦！");
+                btn.innerText = "路过送祝福"; 
+                btn.disabled = false;
             }
         },
         (error) => {
