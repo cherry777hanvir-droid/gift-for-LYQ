@@ -227,25 +227,80 @@ function verifyIdentity() {
     }
 }
 
-// 2. 存储路人祝福
+// 2. 存储路人祝福 (：高精度 GPS + Nominatim 逆地理编码)
 async function sendBlessing() {
     const btn = document.getElementById('btn-stranger');
-    btn.disabled = true; btn.innerText = "获取定位中...";
-    try {
-        const res = await fetch('https://ipapi.co/json/');
-        const ipData = await res.json();
-        const loc = `${ipData.city || '未知'}, ${ipData.country_name}`;
-        
-        const { error } = await _supabase.from('Blessings').insert([
-            { locationName: loc, latitude: ipData.latitude, longitude: ipData.longitude }
-        ]);
-        if(error) throw error;
-        alert(`祝福已记录！来自 ${loc}`);
-        btn.innerText = "祝福成功 ❤️";
-    } catch(e) {
-        alert("祝福发送成功！");
-        btn.innerText = "路过送祝福"; btn.disabled = false;
+    
+    // 防刷机制
+    if (localStorage.getItem('hasBlessed')) {
+        alert("你已经送过祝福啦，感谢你的心意！"); 
+        return;
     }
+
+    btn.disabled = true; 
+    btn.innerText = "正在呼叫卫星定位...";
+
+    // 检查浏览器是否支持定位
+    if (!navigator.geolocation) {
+        alert("抱歉，你的浏览器不支持精准定位哦~");
+        btn.innerText = "路过送祝福"; 
+        btn.disabled = false;
+        return;
+    }
+
+    // 开始调用手机/电脑的底层 GPS
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            btn.innerText = "正在解析城市信息...";
+
+
+            try {
+                const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=10&accept-language=zh-CN`;
+                
+                const geoRes = await fetch(nominatimUrl);
+                const geoData = await geoRes.json();
+                
+                let cityName = "神秘城市";
+                
+                if (geoData && geoData.address) {
+                    // 1. 核心改动：优先只抓取 city (地级市) 或 municipality (直辖市)
+                    // 故意跳过了 county (区县) 级别
+                    let rawCity = geoData.address.city || geoData.address.municipality || geoData.address.province || "未知";
+                    
+                    // 2. 字符串精修：去掉末尾的“市”或“省”，只留地名本身
+                    // 比如“襄阳市” -> “襄阳”，“湖北省” -> “湖北”
+                    cityName = rawCity.replace(/[市省]$/, "");
+                }
+
+                btn.innerText = "正在写入祝福...";
+
+                // 存入数据库
+                const { error } = await _supabase.from('Blessings').insert([
+                    { locationName: cityName, latitude: lat, longitude: lon }
+                ]);
+                
+                if (error) throw error;
+                
+                localStorage.setItem('hasBlessed', 'true');
+                alert(`祝福送达！来自【${cityName}】。`); // 这里就会显示“来自【襄阳】”
+                btn.innerText = "祝福发送成功 ❤️";
+
+            } catch(e) {
+                // ... 错误处理 ...
+            }
+        },
+        (error) => {
+            // 如果用户点击了“拒绝获取位置”，或者定位超时
+            console.warn("定位失败原因:", error.message);
+            alert("需要允许获取位置，才能在地图上为你点亮祝福哦！请刷新页面重试。");
+            btn.innerText = "路过送祝福"; 
+            btn.disabled = false;
+        },
+        // 定位参数：开启高精度，超时时间 10 秒
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
 }
 
 // 3. 关卡逻辑
