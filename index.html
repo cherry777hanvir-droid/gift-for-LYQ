@@ -258,7 +258,7 @@ async function sendBlessing() {
 
              try {
                 // 弃用卡顿的 Nominatim，换成国内响应极快的 BigDataCloud API
-                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`;
+                const geoUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh-cn`;
                 
                 const geoRes = await fetch(geoUrl);
                 const geoData = await geoRes.json();
@@ -356,9 +356,24 @@ async function renderBlessingMap() {
                 data: points, symbolSize: 10,
                 rippleEffect: { brushType: 'stroke' },
                 itemStyle: { color: '#FC9F66' },
-                tooltip: { formatter: (p) => `我在 ${p.name}<br>祝羽琪生日快乐！` }
+                // 确保光点上的文字也不乱码
+                label: {
+                    fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif'
+                }
             }],
-            tooltip: { trigger: 'item' }
+            // 👇 主要是替换这里：强行指定中文字体
+            tooltip: { 
+                trigger: 'item',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderColor: '#FC9F66',
+                borderWidth: 1,
+                formatter: (p) => `我在 ${p.name}<br>祝羽琪生日快乐！`,
+                textStyle: {
+                    color: '#FC9F66',
+                    fontWeight: 'bold',
+                    fontFamily: '"PingFang SC", "Microsoft YaHei", "Heiti SC", sans-serif' // 强制使用标准简中字体
+                }
+            }
         });
     } catch(e) {
         chart.hideLoading();
